@@ -33,8 +33,8 @@
 ├── ecli.h             # ECLI コアヘッダ
 ├── ecli.c             # ECLI コア実装（パーサー・コマンドテーブル）
 ├── main.c             # アプリケーションエントリポイント（実装例）
+├── bsp_uart.h         # UART HAL 共通インターフェースヘッダ
 └── bsp/               # 各アーキテクチャ別 低レイヤUART実装
-    ├── bsp_uart.h     # UART HAL 共通インターフェースヘッダ
     ├── uart_rp2350.c  # Raspberry Pi Pico 1/2 (RP2040 / RP2350)
     ├── uart_stm32c0.c # STMicroelectronics STM32C0 シリーズ
     ├── uart_lpc800.c  # NXP LPC800 シリーズ
