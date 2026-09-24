@@ -13,13 +13,17 @@
 
 /** @brief CLIプロンプト文字列の定義 */
 #ifndef ECLI_PROMPT
-#define ECLI_PROMPT "\r\nECLI> "
+#define ECLI_PROMPT "ECLI> "
 #endif
 
 /** @brief コマンド引数切り分け用のデリミタ（区切り文字）の定義 */
 #ifndef ECLI_DELIM
 #define ECLI_DELIM " \t"
 #endif
+
+/** @brief マクロの値を文字列に変換するためのヘルパーマクロ */
+#define ECLI_STR_HELPER(x) #x
+#define ECLI_STR(x) ECLI_STR_HELPER(x)
 
 /**
  * @brief コマンドハンドラ関数の型定義
@@ -70,7 +74,7 @@ static void cmd_version(int argc, char *argv[])
 {
     (void)argc;
     (void)argv;
-    uart_puts("\r\nECLI Firmware v1.0.0 (Compiled: 2026)");
+    uart_puts("ECLI Firmware v1.0.0\n");
 }
 
 /**
@@ -93,12 +97,16 @@ static void cmd_help(int argc, char *argv[])
 {
     (void)argc;
     (void)argv;
-    uart_puts("\r\nAvailable Commands:");
-    for (size_t i = 0; cmd_table[i].name != NULL; i++) {
-        uart_puts("\r\n  ");
+    uart_puts("Available Commands:\n");
+    for (int i = 0; cmd_table[i].name != NULL; i++) {
+        if (cmd_table[i].help == NULL){ //
+            continue;
+        }
+        uart_puts("  ");
         uart_puts(cmd_table[i].name);
         uart_puts("\t: ");
         uart_puts(cmd_table[i].help);
+        uart_puts("\n");
     }
 }
 
@@ -138,7 +146,7 @@ static char *ecli_strtok_r(char *str, const char *delim, char **saveptr)
         return NULL;
     }
 
-    /* 1. 先頭の区切り文字（デリミタ）をスキップ */
+    /* 先頭の区切り文字（デリミタ）をスキップ */
     while ((*str != '\0') && is_delimiter(*str, delim)) {
         str++;
     }
@@ -149,7 +157,7 @@ static char *ecli_strtok_r(char *str, const char *delim, char **saveptr)
 
     token = str;
 
-    /* 2. トークンの末尾（次の区切り文字）を検索 */
+    /* トークンの末尾（次の区切り文字）を検索 */
     while ((*str != '\0') && !is_delimiter(*str, delim)) {
         str++;
     }
@@ -186,8 +194,14 @@ static void execute_command(char *line)
         return;
     }
 
-    /* 番人（name == NULL）に達するまでテーブルを検索して実行 */
-    for (size_t i = 0; cmd_table[i].name != NULL; i++) {
+    /* 引数上限チェック：まだトークンが残っている場合は上限超過エラーとする */
+    if (token != NULL) {
+        uart_puts("Error: Too many arguments. Maximum allowed is " ECLI_STR(ECLI_MAX_ARGS) ".\n");
+        return;
+    }
+
+	/* 番人（name == NULL）に達するまでテーブルを検索して実行 */
+    for (int i = 0; cmd_table[i].name != NULL; i++) {
         if (strcmp(argv[0], cmd_table[i].name) == 0) {
             cmd_table[i].func(argc, argv);
             return;
@@ -195,9 +209,9 @@ static void execute_command(char *line)
     }
 
     /* 一致するコマンドが存在しない場合の警告メッセージ */
-    uart_puts("\r\nUnknown command: '");
+    uart_puts("Unknown command: '");
     uart_puts(argv[0]);
-    uart_puts("'. Type 'help'.");
+    uart_puts("'. Type 'help'.\n");
 }
 
 /**
@@ -236,6 +250,8 @@ void ecli_poll(void)
         if (ch == '\r' || ch == '\n') {
             last_ch = ch; /* 改行文字を記憶 */
             input_buffer[buffer_idx] = '\0';
+
+            uart_puts("\n");
 
             /* コマンド実行（入力がある場合） */
             if (buffer_idx > 0) {
